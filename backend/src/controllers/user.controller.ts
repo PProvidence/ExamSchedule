@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import Jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -31,10 +31,10 @@ export const loginUser = async (req: Request, res: Response) => {
       });
     }
 
-    const token = Jwt.sign(
-      student,
+    const token = jwt.sign(
+      {...student},
       config.jwtSecret,
-      { expiresIn: config.jwtLifetime }
+      { expiresIn: config.jwtLifetime } as SignOptions
     );
 
     return res.status(200).json({
