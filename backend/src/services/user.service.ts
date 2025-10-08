@@ -191,7 +191,7 @@ export const selectExamBatch = async (
     // Insert schedule
     await client.query(
       `INSERT INTO student_schedule
-       (student_id, course_id, slot_id, batch_id, seatnumber, mode, scheduled_at)
+       (student_id, course_id, slot_id, batch_id, seatnumber, mode, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
       [studentId, courseId, batch.slot_id, batchId, seatNumber, mode]
     );
