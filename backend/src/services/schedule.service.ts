@@ -1,4 +1,3 @@
-import type { ResultSetHeader } from "mysql2";
 import { connection } from "../config/config.ts";
 
 export const createExamSlotWithBatches = async (
@@ -11,17 +10,19 @@ export const createExamSlotWithBatches = async (
   breakEndHour = 14,
   batchGapMinutes = 30
 ) => {
-  const conn = await connection.getConnection();
+  const client = await connection.connect();
 
   try {
-    await conn.beginTransaction();
+    await client.query("BEGIN");
 
-    // Insert exam slot
-    const [slotResult] = await conn.query<ResultSetHeader>(
-      `INSERT INTO exam_slot (startDate, endDate, physical_capacity) VALUES (?, ?, ?)`,
+    // Insert exam slot and return its ID
+    const slotResult = await client.query(
+      `INSERT INTO exam_slot (start_date, end_date, physical_capacity)
+       VALUES ($1, $2, $3)
+       RETURNING id`,
       [startDate, endDate, physicalCapacity]
     );
-    const slotId = slotResult.insertId;
+    const slotId = slotResult.rows[0].id;
 
     // Generate batches
     const batches: { start: Date; end: Date; number: number }[] = [];
@@ -56,27 +57,27 @@ export const createExamSlotWithBatches = async (
       batchNumber++;
     }
 
-    // Insert batches into exam_batches table
+    // Insert batches
     for (const batch of batches) {
-      await conn.query<ResultSetHeader>(
-        `INSERT INTO exam_batches (slot_id, batch_number, start_time, end_time, capacity) 
-         VALUES (?, ?, ?, ?, ?)`,
+      await client.query(
+        `INSERT INTO exam_batches (slot_id, batch_number, start_time, end_time, capacity)
+         VALUES ($1, $2, $3, $4, $5)`,
         [slotId, batch.number, batch.start, batch.end, physicalCapacity]
       );
     }
 
     // Link slot to course
-    await conn.query<ResultSetHeader>(
-      `INSERT INTO course_slot (course_id, slot_id) VALUES (?, ?)`,
+    await client.query(
+      `INSERT INTO course_slot (course_id, slot_id) VALUES ($1, $2)`,
       [courseId, slotId]
     );
 
-    await conn.commit();
+    await client.query("COMMIT");
     return { slotId, batchCount: batches.length };
   } catch (error) {
-    await conn.rollback();
+    await client.query("ROLLBACK");
     throw error;
   } finally {
-    conn.release();
+    client.release();
   }
 };
