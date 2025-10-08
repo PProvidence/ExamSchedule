@@ -56,8 +56,8 @@ export const fetchStudentDetails = async (studentId: number) => {
   const slotsResult = await connection.query(
     `SELECT 
         es.id AS slotid,
-        es.start_date,
-        es.end_date,
+        es.startdate,
+        es.enddate,
         c.id AS courseid,
         c.code AS coursecode,
         c.title AS coursetitle,
@@ -83,18 +83,18 @@ export const fetchStudentExamSchedules = async (studentId: number) => {
         c.code as coursecode,
         c.title as coursetitle,
         es.id as slotid,
-        es.start_date,
-        es.end_date,
+        es.startdate,
+        es.enddate,
         ss.seatnumber,
         ss.mode,
-        ss.scheduled_at,
+        ss.created_at,
         ss.rescheduled
      FROM student_schedule ss
      INNER JOIN course c ON ss.course_id = c.id
      INNER JOIN exam_slot es ON ss.slot_id = es.id
      INNER JOIN student s ON ss.student_id = s.id
      WHERE ss.student_id = $1
-     ORDER BY es.start_date ASC`,
+     ORDER BY es.startdate ASC`,
     [studentId]
   );
 
@@ -106,8 +106,8 @@ export const fetchAvailableSlotsForCourse = async (courseId: number) => {
   const result = await connection.query(
     `SELECT 
       es.id,
-      es.start_date,
-      es.end_date,
+      es.startdate,
+      es.enddate,
       es.physical_capacity,
       es.online_capacity,
       (es.physical_capacity - COALESCE(
@@ -123,7 +123,7 @@ export const fetchAvailableSlotsForCourse = async (courseId: number) => {
          WHERE student_schedule.slot_id = es.id AND student_schedule.course_id = $1), 
         0
       )) > 0
-    ORDER BY es.start_date ASC`,
+    ORDER BY es.startdate ASC`,
     [courseId]
   );
 

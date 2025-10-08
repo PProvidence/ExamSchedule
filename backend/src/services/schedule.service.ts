@@ -17,7 +17,7 @@ export const createExamSlotWithBatches = async (
 
     // Insert exam slot and return its ID
     const slotResult = await client.query(
-      `INSERT INTO exam_slot (start_date, end_date, physical_capacity)
+      `INSERT INTO exam_slot (startdate, enddate, physical_capacity)
        VALUES ($1, $2, $3)
        RETURNING id`,
       [startDate, endDate, physicalCapacity]
