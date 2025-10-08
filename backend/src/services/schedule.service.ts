@@ -67,10 +67,17 @@ export const createExamSlotWithBatches = async (
     }
 
     // Link slot to course
-    await client.query(
-      `INSERT INTO course_slot (course_id, slot_id) VALUES ($1, $2)`,
+    const exists = await client.query(
+      `SELECT 1 FROM course_slot WHERE course_id = $1 AND slot_id = $2`,
       [courseId, slotId]
     );
+
+    if (exists.rowCount === 0) {
+      await client.query(
+        `INSERT INTO course_slot (course_id, slot_id) VALUES ($1, $2)`,
+        [courseId, slotId]
+      );
+    }
 
     await client.query("COMMIT");
     return { slotId, batchCount: batches.length };
