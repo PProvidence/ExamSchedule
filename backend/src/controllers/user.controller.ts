@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import jwt, { type SignOptions } from "jsonwebtoken";
+import jwt, { JwtPayload, type SignOptions } from "jsonwebtoken";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
-import { authenticateUser, fetchAvailableBatchesForSlot, fetchAvailableSlotsForCourse, fetchStudentDetails, fetchStudentExamSchedules, selectExamBatch } from "../services/user.service.ts";
-import { config } from "../config/config.ts";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { authenticateUser, fetchAvailableBatchesForSlot, fetchAvailableSlotsForCourse, fetchStudentDetails, fetchStudentExamSchedules, selectExamBatch } from "../services/user.service";
+import { config } from "../config/config";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -54,7 +54,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
 // Get registered courses for a student
 export const getUserDetails = async (req: Request, res: Response) => {
-  const { id } = req.student;
+  const { id } = (req as JwtPayload).student;
 
   if (!id) {
     return res.status(400).json({
@@ -182,7 +182,7 @@ export const getAvailableBatches = async (req: Request, res: Response) => {
 
 // Pick Exam Batch Controller
 export const pickExamBatch = async (req: Request, res: Response) => {
-  const { id } = req.student;
+  const { id } = (req as JwtPayload).student;
   const { courseId, batchId, mode = "physical" } = req.body;
 
   if (!id || !courseId || !batchId) {

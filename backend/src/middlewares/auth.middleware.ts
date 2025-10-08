@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express"
-import jwt from "jsonwebtoken"
-import { config } from "../config/config.ts";
+import jwt, { JwtPayload } from "jsonwebtoken"
+import { config } from "../config/config";
 
 export const verifyToken = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
     try {
@@ -17,7 +17,7 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
         if (token) {
             try {
                 const decoded = jwt.verify(token, config.jwtSecret);
-                req.student = decoded;
+            (req as JwtPayload).student = decoded;
             } catch (error) {
                 return res.status(401).json({
                     status: false,

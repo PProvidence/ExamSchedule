@@ -1,8 +1,8 @@
-import { config } from './config/config.ts';
+import { config } from './config/config';
 import express from 'express';
 import type { Application } from "express";
-import { userRoutes } from './routes/user.route.ts';
-import scheduleRouter from './routes/schedule.route.ts';
+import { userRoutes } from './routes/user.route';
+import scheduleRouter from './routes/schedule.route';
 
 const app: Application = express();
 

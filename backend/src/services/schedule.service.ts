@@ -1,4 +1,4 @@
-import { connection } from "../config/config.ts";
+import { connection } from "../config/config";
 
 export const createExamSlotWithBatches = async (
   courseId: number,

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { createExamSlot } from "../controllers/schedule.controller.ts";
-import { verifyToken } from "../middlewares/auth.middleware.ts";
+import { createExamSlot } from "../controllers/schedule.controller";
+import { verifyToken } from "../middlewares/auth.middleware";
 const scheduleRouter = Router();
 
 scheduleRouter.post("/slots", verifyToken, createExamSlot);

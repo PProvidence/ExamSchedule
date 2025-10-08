@@ -1,6 +1,6 @@
 
 import { JwtPayload } from "jsonwebtoken";
-import { Student } from "../student.type";
+import { Student } from "../src/types/student.type";
 
 declare global {
   namespace Express {
@@ -9,3 +9,5 @@ declare global {
     }
   }
 }
+
+export {}

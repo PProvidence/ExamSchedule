@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyToken } from "../middlewares/auth.middleware.ts";
+import { verifyToken } from "../middlewares/auth.middleware";
 import {
   loginUser,
   getUserExamSchedules,
@@ -7,9 +7,9 @@ import {
   getUserDetails,
   pickExamBatch,
   getAvailableBatches,
-} from "../controllers/user.controller.ts";
-import { validateSchema } from "../middlewares/validation.middleware.ts";
-import { loginSchema } from "../validations/user.validations.ts";
+} from "../controllers/user.controller";
+import { validateSchema } from "../middlewares/validation.middleware";
+import { loginSchema } from "../validations/user.validations";
 
 
 const userRoutes = Router();

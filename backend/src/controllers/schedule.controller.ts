@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createExamSlotWithBatches } from "../services/schedule.service.ts";
+import { createExamSlotWithBatches } from "../services/schedule.service";
 
 
 export const createExamSlot = async (req: Request, res: Response) => {

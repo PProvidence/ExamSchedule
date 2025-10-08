@@ -1,4 +1,4 @@
-import { connection } from "../config/config.ts";
+import { connection } from "../config/config";
 
 // User authentication
 export const authenticateUser = async (matricNo: string, password: string) => {
