@@ -2,6 +2,7 @@ import { config } from './config/config.ts';
 import express from 'express';
 import type { Application } from "express";
 import { userRoutes } from './routes/user.route.ts';
+import scheduleRouter from './routes/schedule.route.ts';
 
 const app: Application = express();
 
@@ -9,8 +10,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/', userRoutes);
-app.use('/user', userRoutes);
-// app.use('/course', examSchedulingRoutes);
+app.use('/schedule', scheduleRouter);
 
 const port = config.port || 3000;
 

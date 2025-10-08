@@ -12,11 +12,14 @@ export const authenticateUser = async (matricNo: string, password: string) => {
 
   if (rows.length === 0) throw new Error("Student not found");
 
-  const student = rows[0];
-  if (password !== student?.password) {
+  const user = rows[0];
+
+  // For now: plain text comparison (replace with bcrypt later if needed)
+  if (password !== user?.password) {
     throw new Error("Invalid credentials");
   }
 
+  const { password: _, ...student } = user;
   return student;
 };
 
@@ -32,6 +35,7 @@ export const getRegisteredStudents = async () => {
 
 // Get details of a particular user
 export const fetchStudentDetails = async (studentId: number) => {
+  // Fetch student basic info
   const [studentRows] = await connection.query<RowDataPacket[]>(
     `SELECT id, matricNo, fullName, email, department, level 
      FROM student 
@@ -42,6 +46,7 @@ export const fetchStudentDetails = async (studentId: number) => {
   if (studentRows.length === 0) return null;
   const student = studentRows[0];
 
+  // Fetch courses the student is enrolled in
   const [courses] = await connection.query<RowDataPacket[]>(
     `SELECT c.id, c.code, c.title
      FROM course c
@@ -50,7 +55,27 @@ export const fetchStudentDetails = async (studentId: number) => {
     [studentId]
   );
 
-  return { ...student, courses };
+  // Fetch slots the student is registered for
+  const [slots] = await connection.query<RowDataPacket[]>(
+    `SELECT 
+        es.id AS slotId,
+        es.startDate,
+        es.endDate,
+        c.id AS courseId,
+        c.code AS courseCode,
+        c.title AS courseTitle,
+        eb.id AS batchId,
+        eb.start_time AS batchStartTime,
+        eb.end_time AS batchEndTime
+     FROM student_schedule ss
+     INNER JOIN exam_slot es ON ss.slot_id = es.id
+     INNER JOIN course c ON ss.course_id = c.id
+     LEFT JOIN exam_batches eb ON ss.batch_id = eb.id
+     WHERE ss.student_id = ?`,
+    [studentId]
+  );
+
+  return { ...student, courses, slots };
 };
 
 // Get user exam schedules
@@ -81,117 +106,97 @@ export const fetchStudentExamSchedules = async (studentId: number) => {
 
 // Get available slots for a course based on caapcity and schedule
 export const fetchAvailableSlotsForCourse = async (courseId: number) => {
-  const [rows] = await connection.query<RowDataPacket[]>(
-    `
+  const [rows] = await connection.query<RowDataPacket[]>(`
     SELECT 
-     id,
-     startDate,
-     endDate,
-     physical_capacity,
-     online_capacity,
-      (physical_capacity - COUNT(student_schedule.id)) AS availablePhysicalSeats
-    FROM slot sl
-    LEFT JOIN student_schedule ON student_schedule.slot_id =id AND student_schedule.course_id = ?
-    GROUP BY id
-    HAVING avaia=lablePhysicalSeats > 0
-    ORDER BY startDate ASC
-    `,
-    [courseId]
+      exam_slot.id,
+      exam_slot.startDate,
+      exam_slot.endDate,
+      exam_slot.physical_capacity,
+      exam_slot.online_capacity,
+      (exam_slot.physical_capacity - IFNULL(
+        (SELECT COUNT(*) 
+         FROM student_schedule 
+         WHERE student_schedule.slot_id = exam_slot.id AND student_schedule.course_id = ?), 
+        0
+      )) AS availableSeats
+    FROM exam_slot
+    WHERE (exam_slot.physical_capacity - IFNULL(
+        (SELECT COUNT(*) 
+         FROM student_schedule 
+         WHERE student_schedule.slot_id = exam_slot.id AND student_schedule.course_id = ?), 
+        0
+      )) > 0
+    ORDER BY exam_slot.startDate ASC
+  `, [courseId, courseId]);
+
+  return rows;
+};
+
+
+export const fetchAvailableBatchesForSlot = async (slotId: number) => {
+  const [rows] = await connection.query<RowDataPacket[]>(
+    `SELECT 
+       eb.id as batchId, eb.start_time, eb.end_time, eb.capacity,
+       (eb.capacity - COUNT(ss.id)) as availableSeats
+     FROM exam_batches eb
+     LEFT JOIN student_schedule ss ON ss.batch_id = eb.id
+     WHERE eb.slot_id = ?
+     GROUP BY eb.id
+     HAVING availableSeats > 0
+     ORDER BY eb.start_time ASC`,
+    [slotId]
   );
 
   return rows;
 };
 
-// Helper to calculate next available batch time and seat number
-const calculateBatchAndSeat = async (slotId: number) => {
-
-  const [slotRows] = await connection.query<RowDataPacket[]>(
-    `SELECT id, startDate, endDate, physical_capacity 
-     FROM exam_slot WHERE id = ?`,
-    [slotId]
-  );
-
-  if (slotRows.length === 0) throw new Error("Exam slot not found");
-  const slot = slotRows[0];
-
-  const slotStart = new Date(slot?.startDate);
-  const slotEnd = new Date(slot?.endDate);
-  const breakStart = new Date(slotStart);
-  breakStart.setHours(13, 0, 0, 0);
-  const breakEnd = new Date(slotStart);
-  breakEnd.setHours(14, 0, 0, 0); 
-
-  // Get number of students alreay scheduled for the exam
-  const [scheduledRows] = await connection.query<RowDataPacket[]>(
-    `SELECT COUNT(*) as total FROM student_schedule WHERE slot_id = ?`,
-    [slotId]
-  );
-
-  const totalScheduled = scheduledRows[0]?.total as number;
-  const batchSize = slot?.physical_capacity;
-
-  //Calculate seat number
-  const batchNumber = Math.floor(totalScheduled / batchSize);
-  const seatNumber = (totalScheduled % batchSize) + 1;
-
-  // 4. Calculate batch start time
-  const batchDurationMinutes = 60;
-  const breakDurationMinutes = 60;
-  const batchStartTime = new Date(slotStart);
-
-  // Add time for previous batches
-  let addedMinutes = batchNumber * batchDurationMinutes + batchNumber * 30; // 30 min intervals between batches
-
-  batchStartTime.setMinutes(batchStartTime.getMinutes() + addedMinutes);
-
-  // Check if this batch crosses break time — push it forward if needed
-  if (batchStartTime >= breakStart && batchStartTime < breakEnd) {
-    const diff = breakEnd.getTime() - slotStart.getTime();
-    batchStartTime.setTime(batchStartTime.getTime() + diff);
-  }
-
-  if (batchStartTime >= slotEnd) {
-    throw new Error("No more batches available for this slot");
-  }
-
-  return { batchStartTime, seatNumber };
-};
-
-// Pick a slot and insert it into student_schedule if not already scheduled
-export const selectExamSlot = async (
+// Select exam batch
+export const selectExamBatch = async (
   studentId: number,
   courseId: number,
-  slotId: number,
+  batchId: number,
   mode: "physical" | "online" = "physical"
 ) => {
   const conn = await connection.getConnection();
+
   try {
     await conn.beginTransaction();
 
-    // Ensure not already scheduled for this course
+    // Check if student already scheduled this course
     const [existing] = await conn.query<RowDataPacket[]>(
-      `SELECT id FROM student_schedule 
-       WHERE student_id = ? AND course_id = ?`,
+      `SELECT id FROM student_schedule WHERE student_id = ? AND course_id = ?`,
       [studentId, courseId]
     );
+    if (existing.length > 0) throw new Error("Already scheduled for this course");
 
-    if (existing.length > 0) {
-      throw new Error("You have already selected a slot for this course");
-    }
+    // Get batch capacity and number of students scheduled
+    const [batchRows] = await conn.query<RowDataPacket[]>(
+      `SELECT id, slot_id, capacity FROM exam_batches WHERE id = ?`,
+      [batchId]
+    );
+    if (!batchRows.length) throw new Error("Batch not found");
 
-    // Calculate seat number and batch time
-    const { seatNumber, batchStartTime } = await calculateBatchAndSeat(slotId);
+    const batch = batchRows[0];
+    const [scheduledCountRows] = await conn.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as total FROM student_schedule WHERE batch_id = ?`,
+      [batchId]
+    );
+    const totalScheduled = scheduledCountRows[0]?.total ?? 0;
 
-    // Insert schedule record
+    if (totalScheduled >= batch?.capacity) throw new Error("Batch is full");
+
+    const seatNumber = totalScheduled + 1;
+
+    // Insert student schedule
     await conn.query<ResultSetHeader>(
-      `INSERT INTO student_schedule 
-        (student_id, course_id, slot_id, seatNumber, mode, scheduled_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [studentId, courseId, slotId, seatNumber, mode, batchStartTime]
+      `INSERT INTO student_schedule
+       (student_id, course_id, slot_id, batch_id, seatNumber, mode, scheduled_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [studentId, courseId, batch?.slot_id, batchId, seatNumber, mode]
     );
 
     await conn.commit();
-    return { success: true, seatNumber, scheduledTime: batchStartTime };
+    return { success: true, seatNumber, batchId, scheduledTime: batch?.start_time };
   } catch (error) {
     await conn.rollback();
     throw error;

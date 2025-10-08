@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express"
-import jwt, { type JwtPayload } from "jsonwebtoken"
+import jwt from "jsonwebtoken"
 import { config } from "../config/config.ts";
 
 export const verifyToken = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
@@ -17,7 +17,7 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
         if (token) {
             try {
                 const decoded = jwt.verify(token, config.jwtSecret);
-                (req as JwtPayload).user = decoded;
+                req.student = decoded;
             } catch (error) {
                 return res.status(401).json({
                     status: false,
@@ -26,6 +26,7 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
                 });
             }
         }
+
 
         next();
 
@@ -38,13 +39,13 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
     }
 }
 
-export const verifyRole = (roleInput: string) => async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+// export const verifyRole = (roleInput: string) => async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
 
-    const role = (req as JwtPayload).user;
+//     const role = (req.user;
 
-    // verify if user role is equal to inputed role
-    if (role !== roleInput)
-        return res.status(400).json({ status: false, message: "unauthorized access", data: {} });
-    next();
+//     // verify if user role is equal to inputed role
+//     if (role !== roleInput)
+//         return res.status(400).json({ status: false, message: "unauthorized access", data: {} });
+//     next();
 
-}
+// }

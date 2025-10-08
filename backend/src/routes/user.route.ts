@@ -4,8 +4,9 @@ import {
   loginUser,
   getUserExamSchedules,
   getAvailableSlotsForCourse,
-  pickExamSlot,
   getUserDetails,
+  pickExamBatch,
+  getAvailableBatches,
 } from "../controllers/user.controller.ts";
 import { validateSchema } from "../middlewares/validation.middleware.ts";
 import { loginSchema } from "../validations/user.validations.ts";
@@ -19,10 +20,10 @@ userRoutes.post('/auth/login', validateSchema(loginSchema), loginUser);
 // Courses & schedules
 userRoutes.get('/:studentId', verifyToken, getUserDetails); //Get student details including courses
 userRoutes.get('/:studentId/exam-schedules', verifyToken, getUserExamSchedules);
-
 // Slot selection
-userRoutes.get('/:studentId/available-slots/:courseId', verifyToken, getAvailableSlotsForCourse);
-userRoutes.post('/:studentId/pick-slot/:courseId', verifyToken, pickExamSlot);
+userRoutes.get('/slots/:courseId', verifyToken, getAvailableSlotsForCourse);
+userRoutes.get('/batches/:slotId', verifyToken, getAvailableBatches);
+userRoutes.post('/pick-batch', verifyToken, pickExamBatch);
 
 // Rescheduling (student-initiated)
 // userRoutes.patch('/:studentId/exam-schedules/:scheduleId/reschedule', verifyToken, rescheduleExam);

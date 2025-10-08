@@ -1,5 +1,13 @@
 import type { Request, Response } from "express";
-import { authenticateUser, fetchAvailableSlotsForCourse, fetchStudentDetails, fetchStudentExamSchedules, selectExamSlot} from "../services/user.service.ts";
+import Jwt from "jsonwebtoken";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+import { authenticateUser, fetchAvailableBatchesForSlot, fetchAvailableSlotsForCourse, fetchStudentDetails, fetchStudentExamSchedules, selectExamBatch } from "../services/user.service.ts";
+import { config } from "../config/config.ts";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export const loginUser = async (req: Request, res: Response) => {
   const { matricNo, password } = req.body;
@@ -13,12 +21,26 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 
   try {
-    const token = await authenticateUser(matricNo, password);
+    const student = await authenticateUser(matricNo, password);
+
+    if (!student) {
+      return res.status(401).json({
+        status: false,
+        message: "Invalid matric number or password",
+        data: {},
+      });
+    }
+
+    const token = Jwt.sign(
+      student,
+      config.jwtSecret,
+      { expiresIn: config.jwtLifetime }
+    );
 
     return res.status(200).json({
       status: true,
       message: "Login successful",
-      data: { token },
+      data: { token, student },
     });
   } catch (error: any) {
     console.error("Login Error:", error);
@@ -32,9 +54,9 @@ export const loginUser = async (req: Request, res: Response) => {
 
 // Get registered courses for a student
 export const getUserDetails = async (req: Request, res: Response) => {
-  const { studentId } = req.params;
+  const { id } = req.student;
 
-  if (!studentId) {
+  if (!id) {
     return res.status(400).json({
       status: false,
       message: "Student ID is required",
@@ -43,8 +65,8 @@ export const getUserDetails = async (req: Request, res: Response) => {
   }
 
   try {
-    const student = await fetchStudentDetails(parseInt(studentId));
-     if (!student) {
+    const student = await fetchStudentDetails(parseInt(id));
+    if (!student) {
       return res.status(404).json({
         status: false,
         message: "Student not found",
@@ -52,7 +74,7 @@ export const getUserDetails = async (req: Request, res: Response) => {
       });
     }
 
-      return res.status(200).json({
+    return res.status(200).json({
       status: true,
       message: "Student details retrieved successfully",
       data: student,
@@ -98,9 +120,9 @@ export const getUserExamSchedules = async (req: Request, res: Response) => {
 
 // Get available slots for a course
 export const getAvailableSlotsForCourse = async (req: Request, res: Response) => {
-  const { studentId, courseId } = req.params;
+  const { courseId } = req.params;
 
-  if (!studentId || !courseId) {
+  if (!courseId) {
     return res.status(400).json({
       status: false,
       message: "Course id is required",
@@ -125,31 +147,68 @@ export const getAvailableSlotsForCourse = async (req: Request, res: Response) =>
   }
 };
 
-// Pick a slot for a course
-export const pickExamSlot = async (req: Request, res: Response) => {
-  const { studentId, courseId, slotId,  } = req.params;
-  const { mode } = req.body;
+export const getAvailableBatches = async (req: Request, res: Response) => {
+  const { slotId } = req.params;
 
-  if (!studentId || !courseId || !slotId ) {
+  if (!slotId) {
     return res.status(400).json({
       status: false,
-      message: "Student ID, Course ID, slotId and scheduledTime are required",
+      message: "slotId parameter is required",
       data: {},
     });
   }
 
   try {
-    const schedule = await selectExamSlot(parseInt(studentId), parseInt(courseId), parseInt(slotId), mode);
+    const batches = await fetchAvailableBatchesForSlot(parseInt(slotId, 10));
+    const formatted = batches.map((b: any) => ({
+      ...b,
+      start_time: dayjs.utc(b.start_time).tz("Africa/Lagos").format("YYYY-MM-DD HH:mm:ss"),
+      end_time: dayjs.utc(b.end_time).tz("Africa/Lagos").format("YYYY-MM-DD HH:mm:ss"),
+    }));
+    return res.status(200).json({
+      status: true,
+      message: "Available batches retrieved successfully",
+      data: formatted,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      status: false,
+      message: error.message || "Failed to fetch batches",
+      data: {},
+    });
+  }
+};
+
+
+// Pick Exam Batch Controller
+export const pickExamBatch = async (req: Request, res: Response) => {
+  const { id } = req.student;
+  const { courseId, batchId, mode = "physical" } = req.body;
+
+  if (!id || !courseId || !batchId) {
+    return res.status(400).json({
+      status: false,
+      message: "Student ID, Course ID and batchId are required",
+      data: {},
+    });
+  }
+
+  try {
+    const schedule = await selectExamBatch(
+      parseInt(id),
+      parseInt(courseId),
+      parseInt(batchId),
+      mode
+    );
     return res.status(201).json({
       status: true,
-      message: "Slot picked successfully",
+      message: "Batch selected successfully",
       data: schedule,
     });
   } catch (error: any) {
-    console.error("PickExamSlot Error:", error);
     return res.status(400).json({
       status: false,
-      message: error.message || "Failed to pick slot",
+      message: error.message || "Failed to pick batch",
       data: {},
     });
   }
