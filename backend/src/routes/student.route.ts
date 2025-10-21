@@ -10,6 +10,7 @@ import {
 
 const studentRoutes = Router();
 
+
 /**
  * @swagger
  * tags:
