@@ -1,86 +1,42 @@
 import type { Request, Response } from "express";
-import jwt, { JwtPayload, type SignOptions } from "jsonwebtoken";
+import { JwtPayload} from "jsonwebtoken";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { authenticateUser, fetchAvailableBatchesForSlot, fetchAvailableSlotsForCourse, fetchStudentDetails, fetchStudentExamSchedules, selectExamBatch } from "../services/user.service";
-import { config } from "../config/config";
+import { fetchAvailableBatchesForSlot, fetchAvailableSlotsForCourse, fetchUserDetails, fetchStudentExamSchedules, selectExamBatch } from "../services/user.service";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export const loginUser = async (req: Request, res: Response) => {
-  const { matricNo, password } = req.body;
-
-  if (!matricNo || !password) {
-    return res.status(400).json({
-      status: false,
-      message: "Matric number and password are required",
-      data: {},
-    });
-  }
-
-  try {
-    const student = await authenticateUser(matricNo, password);
-
-    if (!student) {
-      return res.status(401).json({
-        status: false,
-        message: "Invalid matric number or password",
-        data: {},
-      });
-    }
-
-    const token = jwt.sign(
-      {...student},
-      config.jwtSecret,
-      { expiresIn: config.jwtLifetime } as SignOptions
-    );
-
-    return res.status(200).json({
-      status: true,
-      message: "Login successful",
-      data: { token, student },
-    });
-  } catch (error: any) {
-    console.error("Login Error:", error);
-    return res.status(500).json({
-      status: false,
-      message: error.message || "Unable to login",
-      data: {},
-    });
-  }
-};
-
-// Get registered courses for a student
+// Get details of authenticated user
 export const getUserDetails = async (req: Request, res: Response) => {
-  const { id } = (req as JwtPayload).student;
+  const { id } = (req as JwtPayload).user;
 
   if (!id) {
     return res.status(400).json({
       status: false,
-      message: "Student ID is required",
+      message: "User ID is required",
       data: {},
     });
   }
 
   try {
-    const student = await fetchStudentDetails(parseInt(id));
-    if (!student) {
-      return res.status(404).json({
+    const user = await fetchUserDetails(parseInt(id));
+    if (!user) {
+      return res.status(400).json({
         status: false,
-        message: "Student not found",
+        message: "User not found",
         data: {},
       });
     }
 
     return res.status(200).json({
       status: true,
-      message: "Student details retrieved successfully",
-      data: student,
+      message: "User details retrieved successfully",
+      data: user,
     });
   } catch (error: any) {
-    console.error("Get Student Details Error:", error);
+    console.error("Get User Details Error:", error);
     return res.status(400).json({
       status: false,
       message: error.message || "Failed to retrieve details",
@@ -182,7 +138,7 @@ export const getAvailableBatches = async (req: Request, res: Response) => {
 
 // Pick Exam Batch Controller
 export const pickExamBatch = async (req: Request, res: Response) => {
-  const { id } = (req as JwtPayload).student;
+  const { id } = (req as JwtPayload).user;
   const { courseId, batchId, mode = "physical" } = req.body;
 
   if (!id || !courseId || !batchId) {

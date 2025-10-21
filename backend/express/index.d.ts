@@ -1,11 +1,11 @@
 
 import { JwtPayload } from "jsonwebtoken";
-import { Student } from "../src/types/student.type";
+import { User } from "../src/types/user.type";
 
 declare global {
   namespace Express {
     interface Request {
-      student?: string | JwtPayload | Student;
+      user?: string | JwtPayload | User;
     }
   }
 }

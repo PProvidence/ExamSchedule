@@ -1,13 +1,13 @@
 import Joi from "joi";
 
 export const loginSchema = Joi.object({
-  matricNo: Joi.string()
+  identifier: Joi.string()
     .trim()
     .required()
     .messages({
-      "string.base": "Matric number must be a string",
-      "string.empty": "Matric number is required",
-      "any.required": "Matric number is required",
+      "string.base": "Matric number/Email must be a string",
+      "string.empty": "Matric number/Email is required",
+      "any.required": "Matric number/Email is required",
     }),
 
   password: Joi.string()
