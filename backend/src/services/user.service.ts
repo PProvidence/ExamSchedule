@@ -1,47 +1,47 @@
 import { connection } from "../config/config";
 
 // User authentication
-export const authenticateUser = async (matricNo: string, password: string) => {
+export const authenticateUser = async (identifier: string, password: string) => {
   const result = await connection.query(
-    `SELECT id, matricno, fullname, password 
-     FROM student 
-     WHERE matricno = $1`,
-    [matricNo]
+    `SELECT *
+     FROM "user"
+      WHERE matricno = $1 OR email = $1`,
+    [identifier]
   );
 
-  if (result.rows.length === 0) throw new Error("Student not found");
+  if (result.rows.length === 0) throw new Error("User not found");
   
-  const user = result.rows[0];
+  const response = result.rows[0];
 
   // Plain text comparison for now (replace with bcrypt later)
-  if (password !== user.password) throw new Error("Invalid credentials");
+  if (password !== response.password) throw new Error("Invalid credentials");
 
-  const { password: _, ...student } = user;
-  return student;
+  const { password: _, ...user } = response;
+  return user;
 };
 
 // Get All Registered Students
 export const getRegisteredStudents = async () => {
   const result = await connection.query(
     `SELECT id, matricno, fullname, email, department, level, created_at 
-     FROM student
+     FROM user
      ORDER BY created_at DESC`
   );
   return result.rows;
 };
 
 // Get details of a particular user
-export const fetchStudentDetails = async (studentId: number) => {
-  // Student info
-  const studentResult = await connection.query(
+export const fetchUserDetails = async (id: number) => {
+  // User info
+  const userResult = await connection.query(
     `SELECT id, matricno, fullname, email, department, level 
-     FROM student 
+     FROM "user" 
      WHERE id = $1`,
-    [studentId]
+    [id]
   );
 
-  if (studentResult.rows.length === 0) return null;
-  const student = studentResult.rows[0];
+  if (userResult.rows.length === 0) return null;
+  const user = userResult.rows[0];
 
   // Courses
   const coursesResult = await connection.query(
@@ -49,7 +49,7 @@ export const fetchStudentDetails = async (studentId: number) => {
      FROM course c
      INNER JOIN student_course sc ON sc.course_id = c.id
      WHERE sc.student_id = $1`,
-    [studentId]
+    [id]
   );
 
   // Slots
@@ -69,10 +69,10 @@ export const fetchStudentDetails = async (studentId: number) => {
      INNER JOIN course c ON ss.course_id = c.id
      LEFT JOIN exam_batches eb ON ss.batch_id = eb.id
      WHERE ss.student_id = $1`,
-    [studentId]
+    [id]
   );
 
-  return { ...student, courses: coursesResult.rows, slots: slotsResult.rows };
+  return { ...user, courses: coursesResult.rows, slots: slotsResult.rows };
 };
 
 // Get user exam schedules
@@ -104,7 +104,8 @@ export const fetchStudentExamSchedules = async (studentId: number) => {
 // Get available slots for a course
 export const fetchAvailableSlotsForCourse = async (courseId: number) => {
   const result = await connection.query(
-    `SELECT 
+    `
+    SELECT 
       es.id,
       es.startdate,
       es.enddate,
@@ -112,23 +113,27 @@ export const fetchAvailableSlotsForCourse = async (courseId: number) => {
       es.online_capacity,
       (es.physical_capacity - COALESCE(
         (SELECT COUNT(*) 
-         FROM student_schedule 
-         WHERE student_schedule.slot_id = es.id AND student_schedule.course_id = $1), 
+         FROM student_schedule ss
+         WHERE ss.slot_id = es.id AND ss.course_id = $1), 
         0
       )) AS availableseats
-    FROM exam_slot es
-    WHERE (es.physical_capacity - COALESCE(
+    FROM course_slot cs
+    JOIN exam_slot es ON cs.slot_id = es.id
+    WHERE cs.course_id = $1
+      AND (es.physical_capacity - COALESCE(
         (SELECT COUNT(*) 
-         FROM student_schedule 
-         WHERE student_schedule.slot_id = es.id AND student_schedule.course_id = $1), 
+         FROM student_schedule ss
+         WHERE ss.slot_id = es.id AND ss.course_id = $1), 
         0
       )) > 0
-    ORDER BY es.startdate ASC`,
+    ORDER BY es.startdate ASC
+    `,
     [courseId]
   );
 
   return result.rows;
 };
+
 
 // Get available batches for a slot
 export const fetchAvailableBatchesForSlot = async (slotId: number) => {

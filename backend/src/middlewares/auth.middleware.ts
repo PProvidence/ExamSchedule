@@ -16,8 +16,8 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
 
         if (token) {
             try {
-                const decoded = jwt.verify(token, config.jwtSecret);
-            (req as JwtPayload).student = decoded;
+                const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
+            (req as JwtPayload).user = decoded;
             } catch (error) {
                 return res.status(401).json({
                     status: false,
@@ -33,19 +33,19 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
     } catch (error) {
         return res.status(401).json({
             status: false,
-            message: "Unverified user/ Unexpected error",
+            message: "An unexpected error occurred",
             data: {}
         })
     }
 }
 
-// export const verifyRole = (roleInput: string) => async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
+export const verifyRole = (roleInput: string) => async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
 
-//     const role = (req.user;
+    const user = (req as JwtPayload).user;
 
-//     // verify if user role is equal to inputed role
-//     if (role !== roleInput)
-//         return res.status(400).json({ status: false, message: "unauthorized access", data: {} });
-//     next();
+    // verify if user role is equal to inputed role
+    if (!user || user.role !== roleInput)
+        return res.status(400).json({ status: false, message: "unauthorized access", data: {} });
+    next();
 
-// }
+}

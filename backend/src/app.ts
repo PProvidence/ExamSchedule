@@ -1,16 +1,20 @@
 import { config } from './config/config';
 import express from 'express';
 import type { Application } from "express";
-import { userRoutes } from './routes/user.route';
-import scheduleRouter from './routes/schedule.route';
+import { studentRoutes } from './routes/student.route';
+import { adminRoutes } from './routes/admin.route';
+import { authRoutes } from './routes/auth.route';
+import { rescheduleRoutes } from './routes/reschedule.route';
 
 const app: Application = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/', userRoutes);
-app.use('/schedule', scheduleRouter);
+app.use('/', authRoutes);
+app.use('/reschedule', rescheduleRoutes);
+app.use('/student', studentRoutes);
+app.use('/admin', adminRoutes);
 
 const port = config.port || 3000;
 
