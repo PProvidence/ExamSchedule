@@ -10,3 +10,5 @@ IN create-exam slot endpoint, make sure that dupicate slots are not created for 
 
     TEST REschedule logic
     My question: How does the make payment flow work?
+
+    examine the endpoint for getting student's exam schedule again
