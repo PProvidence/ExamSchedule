@@ -2,9 +2,7 @@ import type { Request, Response } from "express";
 import { createCourseService, createExamSlotWithBatches, adminRescheduleStudent } from "../services/admin.service";
 import { fetchUserDetails } from "../services/user.service";
 
-/**
- * Admin: Create a new course
- */
+
 export const createCourse = async (req: Request, res: Response) => {
   const { code, title, level } = req.body;
 
