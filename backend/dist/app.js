@@ -5,12 +5,25 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const config_1 = require("./config/config");
 const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
 const swagger_1 = require("./docs/swagger");
 const student_route_1 = require("./routes/student.route");
 const admin_route_1 = require("./routes/admin.route");
 const auth_route_1 = require("./routes/auth.route");
 const reschedule_route_1 = require("./routes/reschedule.route");
 const app = (0, express_1.default)();
+app.use((0, cors_1.default)({
+    origin: [
+        "http://localhost:3000",
+        "https://exma-rr6x.onrender.com",
+        "https://exma-rr6x.onrender.com/api-docs",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://localhost:5000"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use('/', auth_route_1.authRoutes);
