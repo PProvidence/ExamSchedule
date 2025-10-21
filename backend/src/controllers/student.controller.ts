@@ -47,9 +47,9 @@ export const getUserDetails = async (req: Request, res: Response) => {
 
 // Get exam schedules for a student
 export const getUserExamSchedules = async (req: Request, res: Response) => {
-  const { studentId } = req.params;
+  const { id } = (req as JwtPayload).user;
 
-  if (!studentId) {
+  if (!id) {
     return res.status(400).json({
       status: false,
       message: "Student ID is required",
@@ -58,7 +58,7 @@ export const getUserExamSchedules = async (req: Request, res: Response) => {
   }
 
   try {
-    const schedules = await fetchStudentExamSchedules(parseInt(studentId));
+    const schedules = await fetchStudentExamSchedules(parseInt(id));
     return res.status(200).json({
       status: true,
       message: "Exam schedules retrieved successfully",
@@ -170,119 +170,3 @@ export const pickExamBatch = async (req: Request, res: Response) => {
   }
 };
 
-// Student reschedule exam (self-service)
-// export const rescheduleExam = async (req: Request, res: Response) => {
-//   const { studentId, courseId, oldSlotId, newSlotId } = req.body;
-
-//   if (!studentId || !courseId || !oldSlotId || !newSlotId) {
-//     return res.status(400).json({
-//       status: false,
-//       message: "Student ID, course ID, old slot ID, and new slot ID are required",
-//       data: {},
-//     });
-//   }
-
-//   try {
-//     const updatedSlot = await rescheduleExamService(studentId, courseId, oldSlotId, newSlotId);
-//     return res.status(200).json({
-//       status: true,
-//       message: "Reschedule successful",
-//       data: updatedSlot,
-//     });
-//   } catch (error: any) {
-//     console.error("RescheduleExam Error:", error);
-//     return res.status(400).json({
-//       status: false,
-//       message: error.message || "Failed to reschedule",
-//       data: {},
-//     });
-//   }
-// };
-
-// Submit reschedule request
-// export const submitRescheduleRequest = async (req: Request, res: Response) => {
-//   const { studentId } = req.params;
-//   const { courseId, oldSlotId, newSlotId, reason } = req.body;
-
-//   if (!studentId || !courseId || !oldSlotId || !newSlotId || !reason) {
-//     return res.status(400).json({
-//       status: false,
-//       message: "Student ID, schedule ID, and reason are required",
-//       data: {},
-//     });
-//   }
-
-//   try {
-//     const request = await submitRequest(studentId, courseId, oldSlotId, newSlotId, reason);
-//     return res.status(201).json({
-//       status: true,
-//       message: "Reschedule request submitted successfully",
-//       data: request,
-//     });
-//   } catch (error: any) {
-//     console.error("SubmitRescheduleRequest Error:", error);
-//     return res.status(400).json({
-//       status: false,
-//       message: error.message || "Failed to submit reschedule request",
-//       data: {},
-//     });
-//   }
-// };
-
-// Get student's reschedule requests
-// export const getUserRescheduleRequests = async (req: Request, res: Response) => {
-//   const { studentId } = req.params;
-
-//   if (!studentId) {
-//     return res.status(400).json({
-//       status: false,
-//       message: "Student ID is required",
-//       data: {},
-//     });
-//   }
-
-//   try {
-//     const requests = await getRescheduleRequests(studentId);
-//     return res.status(200).json({
-//       status: true,
-//       message: "Reschedule requests retrieved successfully",
-//       data: requests,
-//     });
-//   } catch (error: any) {
-//     console.error("GetUserRescheduleRequests Error:", error);
-//     return res.status(400).json({
-//       status: false,
-//       message: error.message || "Failed to retrieve reschedule requests",
-//       data: {},
-//     });
-//   }
-// };
-
-// Pay reschedule rejection fee
-// export const payRescheduleRejectionFee = async (req: Request, res: Response) => {
-//   const { studentId, requestId } = req.params;
-
-//   if (!studentId || !requestId) {
-//     return res.status(400).json({
-//       status: false,
-//       message: "Student ID and Request ID are required",
-//       data: {},
-//     });
-//   }
-
-//   try {
-//     const result = await payRejectionFee(studentId, requestId);
-//     return res.status(200).json({
-//       status: true,
-//       message: "Payment successful",
-//       data: result,
-//     });
-//   } catch (error: any) {
-//     console.error("PayRescheduleRejectionFee Error:", error);
-//     return res.status(400).json({
-//       status: false,
-//       message: error.message || "Failed to process payment",
-//       data: {},
-//     });
-//   }
-// };

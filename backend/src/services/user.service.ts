@@ -92,7 +92,7 @@ export const fetchStudentExamSchedules = async (studentId: number) => {
      FROM student_schedule ss
      INNER JOIN course c ON ss.course_id = c.id
      INNER JOIN exam_slot es ON ss.slot_id = es.id
-     INNER JOIN student s ON ss.student_id = s.id
+     INNER JOIN user u ON ss.student_id = u.id
      WHERE ss.student_id = $1
      ORDER BY es.startdate ASC`,
     [studentId]
